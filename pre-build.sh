@@ -1,31 +1,43 @@
 #!/bin/bash
 
-echo "=== НАЧАЛО ИНТЕГРАЦИИ ZAPRET 2 ==="
+# ПРОВЕРКА: Если скрипт запущен на хосте GitHub Actions (где ЕСТЬ ИНТЕРНЕТ)
+if [ -n "$GITHUB_WORKSPACE" ] && [ ! -f "/.dockerenv" ]; then
+    echo "=== [ХОСТ GITHUB] СКАЧИВАНИЕ ИСХОДНИКОВ ZAPRET 2 ==="
+    
+    # Скачиваем архив силами GitHub Actions
+    curl -sL https://github.com -o /tmp/zapret2.tar.gz
+    tar -xzf /tmp/zapret2.tar.gz -C /tmp/
+    
+    # Создаем структуру папок внутри дерева Padavan и копируем исходники nfq
+    mkdir -p "$GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret"
+    cp -r /tmp/zapret2-master/nfq "$GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/"
+    
+    echo "=== [ХОСТ GITHUB] ИСХОДНИКИ УСПЕШНО ПОДГОТОВЛЕНЫ ==="
+    exit 0
+fi
 
-# Скачиваем архив исходников с помощью Python (он встроен в контейнер и работает со 100% стабильностью сети)
-python3 -c "import urllib.request; urllib.request.urlretrieve('https://github.com', '/tmp/z2.zip')"
+# ПРОВЕРКА: Если скрипт запущен внутри изолированного Docker-контейнера (где НЕТ ИНТЕРНЕТА)
+echo "=== [DOCKER] НАЧАЛО КОМПИЛЯЦИИ ZAPRET 2 ==="
 
-# Распаковываем архив
-unzip -q /tmp/z2.zip -d /tmp
+# Задаем базовый путь, если переменная очистилась в контейнере
+BASE_DIR="/__w/TP-Link-Archer-C5-V4-Padavan/TP-Link-Archer-C5-V4-Padavan"
 
-# Создаем структуру папок в репозитории Padavan, если она еще не создана автоматикой
-mkdir -p $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret
-cp -r /tmp/zapret2-master/nfq $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/
+# Переходим в папку nfq, которую хост GitHub подготовил заранее
+cd "$BASE_DIR/padavan-ng/trunk/user/zapret/nfq" || exit 1
 
-# Переходим в папку и компилируем nfqws2
-cd $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/nfq
+# Компилируем nfqws под процессор роутера MIPS
 make CC=mipsel-linux-uclibc-gcc STRIP=mipsel-linux-uclibc-strip
 
-# Проверяем успешность компиляции и подменяем оригинальный файл
+# Проверяем успешность компиляции и переносим бинарник на место старого
 if [ -f nfqws ]; then
-    echo "=== Сборка nfqws2 прошла успешно! ==="
-    mkdir -p $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/bin
-    cp nfqws $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/bin/nfqws
-    chmod +x $GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/bin/nfqws
-    echo "Файл Zapret 2 успешно вшит!"
+    echo "=== [DOCKER] Сборка nfqws2 прошла успешно! ==="
+    mkdir -p "$BASE_DIR/padavan-ng/trunk/user/zapret/bin"
+    cp nfqws "$BASE_DIR/padavan-ng/trunk/user/zapret/bin/nfqws"
+    chmod +x "$BASE_DIR/padavan-ng/trunk/user/zapret/bin/nfqws"
+    echo "Бинарный файл Zapret 2 успешно вшит в прошивку!"
 else
-    echo "=== ОШИБКА: Компиляция nfqws2 провалилась! ==="
+    echo "=== [DOCKER] ОШИБКА: Компиляция nfqws2 провалилась! ==="
     exit 1
 fi
 
-echo "=== ЗАВЕРШЕНИЕ ИНТЕГРАЦИИ ZAPRET 2 ==="
+echo "=== [DOCKER] ЗАВЕРШЕНИЕ ИНТЕГРАЦИИ ZAPRET 2 ==="
