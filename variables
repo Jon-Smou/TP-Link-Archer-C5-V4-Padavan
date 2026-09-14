@@ -14,10 +14,4 @@ PADAVAN_THEMES=(
 #  grey2
 #  white
 #  yellow
-
-wget -qO /tmp/z2.zip https://github.com
-unzip -q /tmp/z2.zip -d /tmp
-mkdir -p padavan-ng/trunk/user/zapret
-cp -r /tmp/zapret2-master/nfq padavan-ng/trunk/user/zapret/
-
-
+)
