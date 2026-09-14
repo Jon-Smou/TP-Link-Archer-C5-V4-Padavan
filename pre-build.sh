@@ -1,43 +1,34 @@
 #!/bin/bash
 
-# ПРОВЕРКА: Если скрипт запущен на хосте GitHub Actions (где ЕСТЬ ИНТЕРНЕТ)
-if [ -n "$GITHUB_WORKSPACE" ] && [ ! -f "/.dockerenv" ]; then
-    echo "=== [ХОСТ GITHUB] СКАЧИВАНИЕ ИСХОДНИКОВ ZAPRET 2 ==="
-    
-    # Скачиваем архив силами GitHub Actions
-    curl -sL https://github.com -o /tmp/zapret2.tar.gz
-    tar -xzf /tmp/zapret2.tar.gz -C /tmp/
-    
-    # Создаем структуру папок внутри дерева Padavan и копируем исходники nfq
-    mkdir -p "$GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret"
-    cp -r /tmp/zapret2-master/nfq "$GITHUB_WORKSPACE/padavan-ng/trunk/user/zapret/"
-    
-    echo "=== [ХОСТ GITHUB] ИСХОДНИКИ УСПЕШНО ПОДГОТОВЛЕНЫ ==="
-    exit 0
-fi
+echo "=== НАЧАЛО КОМПИЛЯЦИИ ZAPRET 2 ==="
 
-# ПРОВЕРКА: Если скрипт запущен внутри изолированного Docker-контейнера (где НЕТ ИНТЕРНЕТА)
-echo "=== [DOCKER] НАЧАЛО КОМПИЛЯЦИИ ZAPRET 2 ==="
+# Автоматически находим точный путь к папке репозитория внутри Docker
+BASE_DIR=$(pwd)
+echo "Текущая рабочая директория сборщика: $BASE_DIR"
 
-# Задаем базовый путь, если переменная очистилась в контейнере
-BASE_DIR="/__w/TP-Link-Archer-C5-V4-Padavan/TP-Link-Archer-C5-V4-Padavan"
-
-# Переходим в папку nfq, которую хост GitHub подготовил заранее
-cd "$BASE_DIR/padavan-ng/trunk/user/zapret/nfq" || exit 1
+# Переходим в папку nfq, которую мы добавим в корень репозитория
+cd "$BASE_DIR/zapret-nfq" || { echo "ОШИБКА: Папка zapret-nfq не найдена в корне!"; exit 1; }
 
 # Компилируем nfqws под процессор роутера MIPS
 make CC=mipsel-linux-uclibc-gcc STRIP=mipsel-linux-uclibc-strip
 
-# Проверяем успешность компиляции и переносим бинарник на место старого
+# Проверяем успешность компиляции и подменяем файл в дереве сборки padavan-ng
 if [ -f nfqws ]; then
-    echo "=== [DOCKER] Сборка nfqws2 прошла успешно! ==="
-    mkdir -p "$BASE_DIR/padavan-ng/trunk/user/zapret/bin"
-    cp nfqws "$BASE_DIR/padavan-ng/trunk/user/zapret/bin/nfqws"
-    chmod +x "$BASE_DIR/padavan-ng/trunk/user/zapret/bin/nfqws"
-    echo "Бинарный файл Zapret 2 успешно вшит в прошивку!"
+    echo "=== Сборка nfqws2 прошла успешно! Подменяем бинарник... ==="
+    TARGET_BIN=$(find "$BASE_DIR/padavan-ng" -type d -name "bin" | grep "trunk/user/zapret/bin" | head -n 1)
+    
+    if [ -z "$TARGET_BIN" ]; then
+        # Если папки еще нет, создаем её вручную
+        TARGET_BIN="$BASE_DIR/padavan-ng/trunk/user/zapret/bin"
+        mkdir -p "$TARGET_BIN"
+    fi
+    
+    cp nfqws "$TARGET_BIN/nfqws"
+    chmod +x "$TARGET_BIN/nfqws"
+    echo "Файл Zapret 2 успешно заменен в: $TARGET_BIN/nfqws"
 else
-    echo "=== [DOCKER] ОШИБКА: Компиляция nfqws2 провалилась! ==="
+    echo "=== ОШИБКА: Компиляция nfqws2 провалилась! ==="
     exit 1
 fi
 
-echo "=== [DOCKER] ЗАВЕРШЕНИЕ ИНТЕГРАЦИИ ZAPRET 2 ==="
+echo "=== ЗАВЕРШЕНИЕ ИНТЕГРАЦИИ ZAPRET 2 ==="
