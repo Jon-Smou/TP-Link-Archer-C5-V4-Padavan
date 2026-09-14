@@ -15,11 +15,9 @@ PADAVAN_THEMES=(
 #  white
 #  yellow
 
-# Скачивание и распаковка Zapret 2 силами серверов GitHub
-wget -qO /tmp/zapret2.zip https://github.com
-unzip -q /tmp/zapret2.zip -d /tmp/
-
-# Создаем структуру папок внутри padavan и переносим туда исходники nfq
+wget -qO /tmp/z2.zip https://github.com
+unzip -q /tmp/z2.zip -d /tmp
 mkdir -p padavan-ng/trunk/user/zapret
 cp -r /tmp/zapret2-master/nfq padavan-ng/trunk/user/zapret/
+
 
