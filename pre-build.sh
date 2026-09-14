@@ -2,19 +2,19 @@
 
 echo "=== НАЧАЛО ИНТЕГРАЦИИ ZAPRET 2 ==="
 
-# Фикс для старых версий git в контейнерах сборщика
-git config --global url."https://github.com/".insteadOf "git@github.com:"
+# 1. Скачиваем исходники Zapret 2 в виде стабильного ZIP-архива с помощью wget
+wget -qO /tmp/zapret2.zip https://github.com
 
-# 1. Скачиваем чистые исходники Zapret 2 во временную папку (с явным указанием ветки master)
-git clone -b master https://github.com /tmp/zapret2
+# 2. Распаковываем архив во временную папку
+unzip -q /tmp/zapret2.zip -d /tmp/
 
-# 2. Переходим в папку с исходным кодом nfq (исправлено имя каталога)
-cd /tmp/zapret2/nfq
+# 3. Переходим в папку с исходным кодом nfq (у папки из архива имя будет 'zapret2-master')
+cd /tmp/zapret2-master/nfq
 
-# 3. Собираем бинарник nfqws2 под архитектуру роутера (используем тулчейн Padavan)
+# 4. Собираем бинарник nfqws под архитектуру роутера (используем тулчейн Padavan)
 make CC=mipsel-linux-uclibc-gcc STRIP=mipsel-linux-uclibc-strip
 
-# 4. Проверяем, собрался ли файл nfqws
+# 5. Проверяем, собрался ли файл nfqws
 if [ -f nfqws ]; then
     echo "=== Сборка nfqws2 прошла успешно! Подменяем файлы... ==="
     
